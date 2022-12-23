@@ -10,12 +10,12 @@
  */
 package foundations.pipeline
 
-import zio._
+import zio.*
 
-import zio.test._
-import zio.test.TestAspect._
+import zio.test.*
+import zio.test.TestAspect.*
 
-import foundations.streams.intro.SimpleStream._
+import foundations.streams.intro.SimpleStream.*
 
 /**
  * In this section, you will learn about pipelines as a _stream transformer_,
@@ -25,25 +25,25 @@ import foundations.streams.intro.SimpleStream._
  * intuition for what a "sink" and "pipeline" represent and some of their
  * capabilities and use cases.
  */
-object SimplePipelineSpec extends ZIOSpecDefault {
-  final case class Pipeline[-A, +B](run: Stream[A] => Stream[B]) {
+object SimplePipelineSpec extends ZIOSpecDefault:
+
+  final case class Pipeline[-A, +B](run: Stream[A] => Stream[B]):
     def >>>[C](that: Pipeline[B, C]): Pipeline[A, C] = ???
-  }
-  object Pipeline {
+
+  object Pipeline:
     def identity[A]: Pipeline[A, A] = ???
 
     def map[A, B](f: A => B): Pipeline[A, B] = ???
 
     def filter[A](f: A => Boolean): Pipeline[A, A] = ???
-  }
-  final case class Sink[-A](run: Stream[A] => Unit) {
+
+  final case class Sink[-A](run: Stream[A] => Unit):
     def &&[A1 <: A](that: Sink[A1]): Sink[A1] = ???
-  }
-  object Sink {
+
+  object Sink:
     def foreach[A](f: A => Unit): Sink[A] = ???
 
     def logElements[A](prefix: String): Sink[A] = ???
-  }
 
   def spec =
     suite("SimplePipelineSpec") {
@@ -121,7 +121,7 @@ object SimplePipelineSpec extends ZIOSpecDefault {
            * succeeds.
            */
           test("&&") {
-            var i    = 0
+            var i = 0
             val sink = Sink.foreach[Int](i += _) && Sink.foreach[Int](i += _)
 
             val stream = Stream(1, 2, 3, 4, 5)
@@ -137,7 +137,7 @@ object SimplePipelineSpec extends ZIOSpecDefault {
              * the following unit test pass.
              */
             test("foreach") {
-              var i    = 0
+              var i = 0
               val sink = Sink.foreach[Int](i += _)
 
               val stream = Stream(1, 2, 3, 4, 5)
@@ -163,7 +163,6 @@ object SimplePipelineSpec extends ZIOSpecDefault {
             } @@ ignore
         }
     }
-}
 
 /**
  * In this section, you will learn about slightly more powerful pipelines,
@@ -171,14 +170,13 @@ object SimplePipelineSpec extends ZIOSpecDefault {
  * significantly more powerful sinks, which can produce typed values
  * from consuming a stream.
  */
-object AdvancedPipelineSpec extends ZIOSpecDefault {
-  final case class Pipeline[-A, +B](run: Stream[A] => Stream[B]) {
+object AdvancedPipelineSpec extends ZIOSpecDefault:
+  final case class Pipeline[-A, +B](run: Stream[A] => Stream[B]):
     def >>>[C](that: Pipeline[B, C]): Pipeline[A, C] =
       Pipeline(a => that.run(run(a)))
 
     def >>>[C](that: Sink[B, C]): Sink[A, C] = ???
-  }
-  object Pipeline {
+  object Pipeline:
     def identity[A]: Pipeline[A, A] =
       Pipeline(a => a)
 
@@ -191,13 +189,11 @@ object AdvancedPipelineSpec extends ZIOSpecDefault {
     def splitWords: Pipeline[String, String] = ???
 
     def transform[S, A, B](s: S)(f: (S, A) => (S, Chunk[B])): Pipeline[A, B] = ???
-  }
-  final case class Sink[-A, +B](run: Stream[A] => B) {
+  final case class Sink[-A, +B](run: Stream[A] => B):
     def &&[A1 <: A, C](that: Sink[A1, C]): Sink[A1, (B, C)] = ???
 
     def map[C](f: B => C): Sink[A, C] = ???
-  }
-  object Sink {
+  object Sink:
 
     def foreach[A](f: A => Unit): Sink[A, Unit] =
       Sink(_.foldLeft[Unit](())((_, a) => f(a)))
@@ -206,7 +202,6 @@ object AdvancedPipelineSpec extends ZIOSpecDefault {
       ???
 
     def fold[S, A](s: S)(f: (S, A) => S): Sink[A, S] = ???
-  }
 
   def spec = suite("AdvancedPipelineSpec") {
     suite("Pipeline") {
@@ -313,4 +308,3 @@ object AdvancedPipelineSpec extends ZIOSpecDefault {
           }
       }
   }
-}

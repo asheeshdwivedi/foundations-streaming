@@ -16,10 +16,10 @@
  */
 package foundations.concurrent
 
-import zio._
+import zio.*
 
-import zio.test._
-import zio.test.TestAspect._
+import zio.test.*
+import zio.test.TestAspect.*
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -28,21 +28,20 @@ import java.util.concurrent.atomic.AtomicReference
  * easy to implement or get right. Nor is it necessarily obvious where to stop,
  * since the number of potentially useful concurrent operators is very high.
  */
-object ConcurrentSpec extends ZIOSpecDefault {
-  trait Stream[+A] { self =>
+object ConcurrentSpec extends ZIOSpecDefault:
+  trait Stream[+A]:
+    self =>
     def receive(onElement: A => Unit, onDone: () => Unit): Unit
 
     final def map[B](f: A => B): Stream[B] =
-      new Stream[B] {
+      new Stream[B]:
         def receive(onElement: B => Unit, onDone: () => Unit): Unit =
           self.receive(a => onElement(f(a)), onDone)
-      }
 
     final def filter(f: A => Boolean): Stream[A] =
-      new Stream[A] {
+      new Stream[A]:
         def receive(onElement: A => Unit, onDone: () => Unit): Unit =
-          self.receive(a => if (f(a)) onElement(a), onDone)
-      }
+          self.receive(a => if f(a) then onElement(a), onDone)
 
     final def merge[A1 >: A](that: => Stream[A1]): Stream[A1] = ???
 
@@ -52,7 +51,7 @@ object ConcurrentSpec extends ZIOSpecDefault {
 
     final def batchUntil(maxSize: Int, maxDelay: Duration): Stream[Chunk[A]] = ???
 
-    final def runCollect: Chunk[A] = {
+    final def runCollect: Chunk[A] =
       val chunkRef = new AtomicReference[Chunk[A]](Chunk.empty)
 
       val countDownLatch = new java.util.concurrent.CountDownLatch(1)
@@ -62,16 +61,13 @@ object ConcurrentSpec extends ZIOSpecDefault {
       countDownLatch.await()
 
       chunkRef.get()
-    }
-  }
-  object Stream {
+
+  object Stream:
     def apply[A](as0: A*): Stream[A] =
-      new Stream[A] {
+      new Stream[A]:
         def receive(onElement: A => Unit, onDone: () => Unit): Unit =
           try as0.foreach(onElement)
           finally onDone()
-      }
-  }
 
   def spec =
     suite("ConcurrentSpec")(
@@ -129,4 +125,3 @@ object ConcurrentSpec extends ZIOSpecDefault {
         assertTrue(batched.runCollect.toSet == Set(Chunk(1, 2, 3), Chunk(4, 5, 6), Chunk(7, 8, 9), Chunk(10)))
       } @@ ignore
     )
-}

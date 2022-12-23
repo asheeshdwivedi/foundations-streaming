@@ -21,9 +21,9 @@
  */
 package foundations.streams.intro
 
-import zio._
-import zio.test._
-import zio.test.TestAspect._
+import zio.*
+import zio.test.*
+import zio.test.TestAspect.*
 import scala.annotation.tailrec
 
 /**
@@ -39,8 +39,9 @@ import scala.annotation.tailrec
  * which is the simplest possible mental model, and allows you to leverage
  * your knowledge of Scala collections to understand streams.
  */
-object SimpleStream extends ZIOSpecDefault {
-  sealed trait Stream[+A] {
+object SimpleStream extends ZIOSpecDefault:
+
+  sealed trait Stream[+A]:
     final def map[B](f: A => B): Stream[B] = ???
 
     final def take(n: Int): Stream[A] = ???
@@ -58,29 +59,25 @@ object SimpleStream extends ZIOSpecDefault {
     final def foldLeft[B](initial: B)(f: (B, A) => B): B = ???
 
     final def runCollect: Chunk[A] =
-      this match {
+      this match
         case Stream.Empty            => Chunk.empty
         case Stream.Cons(head, tail) => Chunk.single(head()) ++ tail().runCollect
-      }
-  }
-  object Stream {
-    case object Empty                                               extends Stream[Nothing]
+
+  object Stream:
+    case object Empty extends Stream[Nothing]
     final case class Cons[+A](head: () => A, tail: () => Stream[A]) extends Stream[A]
 
-    def apply[A](as: A*): Stream[A] = {
+    def apply[A](as: A*): Stream[A] =
       def loop(list: List[A]): Stream[A] =
-        list match {
+        list match
           case Nil          => Empty
           case head :: tail => Cons(() => head, () => loop(tail))
-        }
 
       loop(as.toList)
-    }
 
     def unfold[S, A](initial: S)(f: S => Option[S]): Stream[S] = ???
 
     def iterate[S](initial: S)(f: S => S): Stream[S] = unfold(initial)(s => Some(f(s)))
-  }
 
   def spec = suite("SimpleStream") {
     suite("core operators") {
@@ -94,9 +91,8 @@ object SimpleStream extends ZIOSpecDefault {
       test("map") {
         val stream = Stream(1, 2, 3, 4)
 
-        for {
-          mapped <- ZIO.succeed(stream.map(_ + 1))
-        } yield assertTrue(mapped.runCollect == Chunk(2, 3, 4, 5))
+        for mapped <- ZIO.succeed(stream.map(_ + 1))
+        yield assertTrue(mapped.runCollect == Chunk(2, 3, 4, 5))
       } @@ ignore +
         /**
          * EXERCISE
@@ -107,9 +103,8 @@ object SimpleStream extends ZIOSpecDefault {
         test("take") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            taken <- ZIO.succeed(stream.take(2))
-          } yield assertTrue(taken.runCollect == Chunk(1, 2))
+          for taken <- ZIO.succeed(stream.take(2))
+          yield assertTrue(taken.runCollect == Chunk(1, 2))
         } @@ ignore +
         /**
          * EXERCISE
@@ -120,9 +115,8 @@ object SimpleStream extends ZIOSpecDefault {
         test("drop") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            dropped <- ZIO.succeed(stream.drop(2))
-          } yield assertTrue(dropped.runCollect == Chunk(3, 4))
+          for dropped <- ZIO.succeed(stream.drop(2))
+          yield assertTrue(dropped.runCollect == Chunk(3, 4))
         } @@ ignore +
         /**
          * EXERCISE
@@ -133,9 +127,8 @@ object SimpleStream extends ZIOSpecDefault {
         test("filter") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            filtered <- ZIO.succeed(stream.filter(_ % 2 == 0))
-          } yield assertTrue(filtered.runCollect == Chunk(2, 4))
+          for filtered <- ZIO.succeed(stream.filter(_ % 2 == 0))
+          yield assertTrue(filtered.runCollect == Chunk(2, 4))
         } @@ ignore +
         /**
          * EXERCISE
@@ -149,9 +142,8 @@ object SimpleStream extends ZIOSpecDefault {
           val stream1 = Stream(1, 2, 3, 4)
           val stream2 = Stream(5, 6, 7, 8)
 
-          for {
-            appended <- ZIO.succeed(stream1 ++ stream2)
-          } yield assertTrue(appended.runCollect == Chunk(1, 2, 3, 4, 5, 6, 7, 8))
+          for appended <- ZIO.succeed(stream1 ++ stream2)
+          yield assertTrue(appended.runCollect == Chunk(1, 2, 3, 4, 5, 6, 7, 8))
         } @@ ignore +
         /**
          * EXERCISE
@@ -162,9 +154,8 @@ object SimpleStream extends ZIOSpecDefault {
         test("flatMap") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            flatMapped <- ZIO.succeed(stream.flatMap(a => Stream(a, a)))
-          } yield assertTrue(flatMapped.runCollect == Chunk(1, 1, 2, 2, 3, 3, 4, 4))
+          for flatMapped <- ZIO.succeed(stream.flatMap(a => Stream(a, a)))
+          yield assertTrue(flatMapped.runCollect == Chunk(1, 1, 2, 2, 3, 3, 4, 4))
         } @@ ignore +
         /**
          * EXERCISE
@@ -176,18 +167,18 @@ object SimpleStream extends ZIOSpecDefault {
           val userIdData = List("jdegoes", "jdoe", "msmith")
           val database = Map(
             "jdegoes" -> User("jdegoes", "John De Goes", 43),
-            "jdoe"    -> User("jdoe", "John Doe", 30),
-            "msmith"  -> User("msmith", "Mary Smith", 25)
+            "jdoe" -> User("jdoe", "John Doe", 30),
+            "msmith" -> User("msmith", "Mary Smith", 25)
           )
           def lookupUser(id: String): Stream[User] =
-            Stream(database.get(id).toList: _*)
+            Stream(database.get(id).toList*)
 
-          val userIds = Stream(userIdData: _*)
+          val userIds = Stream(userIdData*)
 
-          val streamProgram = for {
-            id   <- userIds
+          val streamProgram = for
+            id <- userIds
             user <- lookupUser(id)
-          } yield user
+          yield user
 
           val result = streamProgram.runCollect
 
@@ -208,9 +199,8 @@ object SimpleStream extends ZIOSpecDefault {
         test("mapAccum") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            mapped <- ZIO.succeed(stream.mapAccum(0)((acc, a) => (acc + a, acc + a)))
-          } yield assertTrue(mapped.runCollect == Chunk(1, 3, 6, 10))
+          for mapped <- ZIO.succeed(stream.mapAccum(0)((acc, a) => (acc + a, acc + a)))
+          yield assertTrue(mapped.runCollect == Chunk(1, 3, 6, 10))
         } @@ ignore +
         /**
          * EXERCISE
@@ -221,9 +211,8 @@ object SimpleStream extends ZIOSpecDefault {
         test("foldLeft") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            folded <- ZIO.succeed(stream.foldLeft(0)(_ + _))
-          } yield assertTrue(folded == 10)
+          for folded <- ZIO.succeed(stream.foldLeft(0)(_ + _))
+          yield assertTrue(folded == 10)
         } @@ ignore
     } +
       suite("advanced constructors") {
@@ -254,7 +243,6 @@ object SimpleStream extends ZIOSpecDefault {
           } @@ ignore
       }
   }
-}
 
 /**
  * RESOURCES
@@ -264,11 +252,9 @@ object SimpleStream extends ZIOSpecDefault {
  * do not explicitly open or close resources, as these operations are baked
  * into streams that access resourceful contents (such as sockets, files,
  * persistent queues, database result sets, etc.).
- *
- *
  */
-object ResourcefulStream extends ZIOSpecDefault {
-  sealed trait Stream[+A] {
+object ResourcefulStream extends ZIOSpecDefault:
+  sealed trait Stream[+A]:
     final def map[B](f: A => B): Stream[B] = ???
 
     final def ++[A1 >: A](that: => Stream[A1]): Stream[A1] = ???
@@ -277,10 +263,10 @@ object ResourcefulStream extends ZIOSpecDefault {
 
     final def flatMap[B](f: A => Stream[B]): Stream[B] = ???
 
-    final def runCollect: Chunk[A] = {
+    final def runCollect: Chunk[A] =
       @tailrec
       def loop[A](streams: List[(Stream[A], List[() => Unit])], acc: Chunk[A]): Chunk[A] =
-        streams match {
+        streams match
           case Nil => acc
 
           case (Stream.Empty, finalizers) :: rest =>
@@ -293,25 +279,20 @@ object ResourcefulStream extends ZIOSpecDefault {
 
           case (Stream.Ensuring(stream, finalizer), finalizers) :: rest =>
             loop((stream, finalizer :: finalizers) :: rest, acc)
-        }
 
       loop((this -> Nil) :: Nil, Chunk.empty)
-    }
-  }
-  object Stream {
-    case object Empty                                                       extends Stream[Nothing]
-    final case class Cons[+A](head: () => A, tail: () => Stream[A])         extends Stream[A]
+  object Stream:
+    case object Empty extends Stream[Nothing]
+    final case class Cons[+A](head: () => A, tail: () => Stream[A]) extends Stream[A]
     final case class Ensuring[+A](stream: Stream[A], finalizer: () => Unit) extends Stream[A]
 
-    def apply[A](as: A*): Stream[A] = {
+    def apply[A](as: A*): Stream[A] =
       def loop(list: List[A]): Stream[A] =
-        list match {
+        list match
           case Nil          => Empty
           case head :: tail => Cons(() => head, () => loop(tail))
-        }
 
       loop(as.toList)
-    }
 
     def attempt[A](a: => A): Stream[A] =
       ???
@@ -319,12 +300,10 @@ object ResourcefulStream extends ZIOSpecDefault {
     def suspend[A](stream: => Stream[A]): Stream[A] =
       ???
 
-    def fromFile(file: String): Stream[Byte] = {
+    def fromFile(file: String): Stream[Byte] =
       import java.io.FileInputStream
 
       ???
-    }
-  }
 
   def spec = suite("ResourcefulStream") {
 
@@ -364,4 +343,3 @@ object ResourcefulStream extends ZIOSpecDefault {
         assertTrue(stream.runCollect.length > 0)
       } @@ ignore
   }
-}

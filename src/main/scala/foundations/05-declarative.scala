@@ -14,15 +14,16 @@
  */
 package foundations.declarative
 
-import zio._
-import zio.stream._
+import zio.*
+import zio.stream.*
 
-import zio.test._
-import zio.test.TestAspect._
-import java.{ util => ju }
+import zio.test.*
+import zio.test.TestAspect.*
+import java.{ util as ju }
 
-object DeclarativeSpec extends ZIOSpecDefault {
-  sealed trait Stream[+A] { self =>
+object DeclarativeSpec extends ZIOSpecDefault:
+  sealed trait Stream[+A]:
+    self =>
     final def >>>[B](pipeline: Pipeline[A, B]): Stream[B] = pipeline.run(self)
 
     final def map[B](f: A => B): Stream[B] = ???
@@ -31,7 +32,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
 
     final def drop(n: Int): Stream[A] = ???
 
-    final def ensuring(finalizer: UIO[Any]): Stream[A] = Stream.Ensuring(self, finalizer)
+    final def ensuring(finalizer: UIO[Any]): Stream[A] =
+      Stream.Ensuring(self, finalizer)
 
     final def filter(f: A => Boolean): Stream[A] = ???
 
@@ -43,28 +45,33 @@ object DeclarativeSpec extends ZIOSpecDefault {
 
     final def fold[S](initial: S)(f: (S, A) => S): Task[S] =
       ZIO.scoped {
-        foldZIO(initial) {
-          case (acc, a) => ZIO.succeed(Some(f(acc, a)))
+        foldZIO(initial) { case (acc, a) =>
+          ZIO.succeed(Some(f(acc, a)))
         }.map(_._1)
       }
 
-    def foldZIO[S](initial: S)(f: (S, A) => Task[Option[S]]): ZIO[Scope, Throwable, (S, Option[Stream[A]])]
+    def foldZIO[S](initial: S)(
+        f: (S, A) => Task[Option[S]]
+    ): ZIO[Scope, Throwable, (S, Option[Stream[A]])]
 
     def transduce[A1 >: A, B](sink: Sink[A1, B]): Stream[B] = ???
 
     final def runCollect: Task[Chunk[A]] =
       ZIO.scoped {
-        foldZIO[Chunk[A]](Chunk.empty) {
-          case (acc, a) => ZIO.succeed(Some(acc :+ a))
+        foldZIO[Chunk[A]](Chunk.empty) { case (acc, a) =>
+          ZIO.succeed(Some(acc :+ a))
         }.map(_._1)
       }
 
-    def unconsWith[Z](empty: Z, cons: (A, Stream[A]) => Z): ZIO[Scope, Throwable, Z] =
+    def unconsWith[Z](
+        empty: Z,
+        cons: (A, Stream[A]) => Z
+    ): ZIO[Scope, Throwable, Z] =
       unconsWithZIO(ZIO.succeed(empty), (h, t) => ZIO.succeed(cons(h, t)))
 
     def unconsWithZIO[Z](
-      empty: ZIO[Scope, Throwable, Z],
-      cons: (A, Stream[A]) => ZIO[Scope, Throwable, Z]
+        empty: ZIO[Scope, Throwable, Z],
+        cons: (A, Stream[A]) => ZIO[Scope, Throwable, Z]
     ): ZIO[Scope, Throwable, Z] =
       uncons.flatMap {
         case None               => empty
@@ -72,7 +79,7 @@ object DeclarativeSpec extends ZIOSpecDefault {
       }
 
     def uncons: ZIO[Scope, Throwable, Option[(A, Stream[A])]] =
-      self match {
+      self match
         case Stream.Empty => ZIO.succeed(None)
 
         case Stream.Make(make) => make.flatMap(_.uncons)
@@ -81,35 +88,37 @@ object DeclarativeSpec extends ZIOSpecDefault {
           ZIO.succeed(Some(head -> tail))
 
         case Stream.Ensuring(stream, finalizer) =>
-          for {
-            _   <- ZIO.addFinalizer(finalizer)
+          for
+            _ <- ZIO.addFinalizer(finalizer)
             opt <- stream.uncons
-          } yield opt
-      }
-  }
-  object Stream {
-    case object Empty extends Stream[Nothing] {
+          yield opt
+  object Stream:
+    case object Empty extends Stream[Nothing]:
       type A = Nothing
 
-      def foldZIO[S](initial: S)(f: (S, A) => Task[Option[S]]): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
+      def foldZIO[S](initial: S)(
+          f: (S, A) => Task[Option[S]]
+      ): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
         ???
-    }
-    final case class Make[+A](make: ZIO[Scope, Throwable, Stream[A]]) extends Stream[A] {
-      def foldZIO[S](initial: S)(f: (S, A) => Task[Option[S]]): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
+    final case class Make[+A](make: ZIO[Scope, Throwable, Stream[A]]) extends Stream[A]:
+      def foldZIO[S](initial: S)(
+          f: (S, A) => Task[Option[S]]
+      ): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
         ???
-    }
-    final case class Cons[+A](head: A, tail: Stream[A]) extends Stream[A] {
-      def foldZIO[S](initial: S)(f: (S, A) => Task[Option[S]]): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
+    final case class Cons[+A](head: A, tail: Stream[A]) extends Stream[A]:
+      def foldZIO[S](initial: S)(
+          f: (S, A) => Task[Option[S]]
+      ): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
         ???
-    }
-    final case class Ensuring[A](stream: Stream[A], finalizer: UIO[Any]) extends Stream[A] {
-      def foldZIO[S](initial: S)(f: (S, A) => Task[Option[S]]): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
+    final case class Ensuring[A](stream: Stream[A], finalizer: UIO[Any]) extends Stream[A]:
+      def foldZIO[S](initial: S)(
+          f: (S, A) => Task[Option[S]]
+      ): ZIO[Scope, Throwable, (S, Option[Stream[A]])] =
         ???
-    }
 
     def apply[A](as: A*): Stream[A] =
-      as.toList.foldRight[Stream[A]](Stream.empty) {
-        case (a, acc) => Stream.Cons(a, acc)
+      as.toList.foldRight[Stream[A]](Stream.empty) { case (a, acc) =>
+        Stream.Cons(a, acc)
       }
 
     def attempt[A](a: => A): Stream[A] =
@@ -119,33 +128,34 @@ object DeclarativeSpec extends ZIOSpecDefault {
 
     def fromFile(file: String): Stream[Byte] = ???
 
-    def iterate[S](initial: S)(f: S => S): Stream[S] = unfold(initial)(s => Some(f(s)))
+    def iterate[S](initial: S)(f: S => S): Stream[S] =
+      unfold(initial)(s => Some(f(s)))
 
     def succeed[A](a: => A): Stream[A] =
       Stream.unwrap(ZIO.succeed(a).map(a => Stream(a)))
 
     def unfold[S, A](initial: S)(f: S => Option[S]): Stream[S] =
       Stream(initial) ++ {
-        f(initial) match {
+        f(initial) match
           case None    => Stream.empty
           case Some(s) => unfold(s)(f)
-        }
       }
 
     def unwrap[A](make: ZIO[Scope, Throwable, Stream[A]]): Stream[A] =
       Stream.Make(make)
-  }
 
-  final case class Pipeline[-A, +B](run: Stream[A] => Stream[B]) { self =>
+  final case class Pipeline[-A, +B](run: Stream[A] => Stream[B]):
+    self =>
     def >>>[C](that: Pipeline[B, C]): Pipeline[A, C] =
       Pipeline(self.run.andThen(that.run))
-  }
-  object Pipeline {
+  object Pipeline:
     def splitOn(char: Char): Pipeline[String, String] = ???
 
     def utf8Decode: Pipeline[Byte, String] = ???
-  }
-  final case class Sink[A, +B](run: Stream[A] => ZIO[Scope, Throwable, (B, Option[Stream[A]])]) { self =>
+  final case class Sink[A, +B](
+      run: Stream[A] => ZIO[Scope, Throwable, (B, Option[Stream[A]])]
+  ):
+    self =>
     def flatMap[C](f: B => Sink[A, C]): Sink[A, C] =
       Sink { stream =>
         self.run(stream).flatMap {
@@ -156,15 +166,14 @@ object DeclarativeSpec extends ZIOSpecDefault {
       }
 
     def map[C](f: B => C): Sink[A, C] = self.flatMap(a => Sink.succeed(f(a)))
-  }
-  object Sink {
+  object Sink:
     def collectN[A](n: Int): Sink[A, Chunk[A]] =
-      if (n <= 0) Sink.succeed(Chunk.empty)
+      if n <= 0 then Sink.succeed(Chunk.empty)
       else
-        for {
-          a  <- Sink.read[A]
+        for
+          a <- Sink.read[A]
           as <- collectN(n - 1)
-        } yield Chunk(a) ++ as
+        yield Chunk(a) ++ as
 
     def leftover[A](l: Stream[A]): Sink[A, Unit] =
       Sink[A, Unit] { stream =>
@@ -172,17 +181,15 @@ object DeclarativeSpec extends ZIOSpecDefault {
       }
 
     def read[A]: Sink[A, A] =
-      Sink(
-        s =>
-          s.unconsWithZIO(
-            ZIO.fail(new ju.NoSuchElementException("The stream was empty")),
-            (a, s) => ZIO.succeed(a -> Some(s))
-          )
+      Sink(s =>
+        s.unconsWithZIO(
+          ZIO.fail(new ju.NoSuchElementException("The stream was empty")),
+          (a, s) => ZIO.succeed(a -> Some(s))
+        )
       )
 
     def succeed[A, B](b: => B): Sink[A, B] =
       Sink(s => ZIO.succeed(b -> Some(s)))
-  }
 
   def spec =
     suite("DeclarativeSpec") {
@@ -197,9 +204,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
         test("foldLeft") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            chunk <- stream.runCollect
-          } yield assertTrue(chunk == Chunk(1, 2, 3, 4))
+          for chunk <- stream.runCollect
+          yield assertTrue(chunk == Chunk(1, 2, 3, 4))
         } @@ ignore +
           /**
            * EXERCISE
@@ -210,9 +216,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("map") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              mapped <- stream.map(_ + 1).runCollect
-            } yield assertTrue(mapped == Chunk(2, 3, 4, 5))
+            for mapped <- stream.map(_ + 1).runCollect
+            yield assertTrue(mapped == Chunk(2, 3, 4, 5))
           } @@ ignore +
           /**
            * EXERCISE
@@ -223,9 +228,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("take") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              taken <- stream.take(2).runCollect
-            } yield assertTrue(taken == Chunk(1, 2))
+            for taken <- stream.take(2).runCollect
+            yield assertTrue(taken == Chunk(1, 2))
           } @@ ignore +
           /**
            * EXERCISE
@@ -236,9 +240,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("drop") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              dropped <- stream.drop(2).runCollect
-            } yield assertTrue(dropped == Chunk(3, 4))
+            for dropped <- stream.drop(2).runCollect
+            yield assertTrue(dropped == Chunk(3, 4))
           } @@ ignore +
           /**
            * EXERCISE
@@ -249,9 +252,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("filter") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              filtered <- stream.filter(_ % 2 == 0).runCollect
-            } yield assertTrue(filtered == Chunk(2, 4))
+            for filtered <- stream.filter(_ % 2 == 0).runCollect
+            yield assertTrue(filtered == Chunk(2, 4))
           } @@ ignore +
           /**
            * EXERCISE
@@ -265,9 +267,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
             val stream1 = Stream(1, 2, 3, 4)
             val stream2 = Stream(5, 6, 7, 8)
 
-            for {
-              appended <- (stream1 ++ stream2).runCollect
-            } yield assertTrue(appended == Chunk(1, 2, 3, 4, 5, 6, 7, 8))
+            for appended <- (stream1 ++ stream2).runCollect
+            yield assertTrue(appended == Chunk(1, 2, 3, 4, 5, 6, 7, 8))
           } @@ ignore +
           /**
            * EXERCISE
@@ -278,9 +279,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("flatMap") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              flatMapped <- stream.flatMap(a => Stream(a, a)).runCollect
-            } yield assertTrue(flatMapped == Chunk(1, 1, 2, 2, 3, 3, 4, 4))
+            for flatMapped <- stream.flatMap(a => Stream(a, a)).runCollect
+            yield assertTrue(flatMapped == Chunk(1, 1, 2, 2, 3, 3, 4, 4))
           } @@ ignore +
           /**
            * EXERCISE
@@ -289,11 +289,11 @@ object DeclarativeSpec extends ZIOSpecDefault {
            * case pass.
            */
           test("mapAccum") {
-            val stream = Stream(1, 2, 3, 4).mapAccum(0)((acc, a) => (acc + a, acc + a))
+            val stream =
+              Stream(1, 2, 3, 4).mapAccum(0)((acc, a) => (acc + a, acc + a))
 
-            for {
-              result <- stream.runCollect
-            } yield assertTrue(result == Chunk(1, 3, 6, 10))
+            for result <- stream.runCollect
+            yield assertTrue(result == Chunk(1, 3, 6, 10))
           } @@ ignore +
           /**
            * EXERCISE
@@ -304,9 +304,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("transduce") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              result <- stream.transduce(Sink.collectN[Int](2)).runCollect
-            } yield assertTrue(result == Chunk(Chunk(1, 2), Chunk(3, 4)))
+            for result <- stream.transduce(Sink.collectN[Int](2)).runCollect
+            yield assertTrue(result == Chunk(Chunk(1, 2), Chunk(3, 4)))
           } @@ ignore
 
         /**
@@ -318,9 +317,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
         test("fromFile") {
           val stream = Stream.fromFile("build.sbt")
 
-          for {
-            results <- stream.runCollect
-          } yield assertTrue(results.length > 0)
+          for results <- stream.runCollect
+          yield assertTrue(results.length > 0)
         } @@ ignore
       } +
         suite("Pipeline") {
@@ -333,9 +331,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
           test("splitOn") {
             val stream = Stream("Hello World!", "Goodbye!")
 
-            for {
-              result <- (stream >>> Pipeline.splitOn(' ')).runCollect
-            } yield assertTrue(result == Chunk("Hello", "World!", "Goodbye!"))
+            for result <- (stream >>> Pipeline.splitOn(' ')).runCollect
+            yield assertTrue(result == Chunk("Hello", "World!", "Goodbye!"))
           } @@ ignore +
             /**
              * EXERCISE
@@ -346,10 +343,8 @@ object DeclarativeSpec extends ZIOSpecDefault {
             test("utf8Decode") {
               val bytes = Chunk.fromArray("Hello World!".getBytes("UTF-8"))
 
-              for {
-                result <- (Stream(bytes: _*) >>> Pipeline.utf8Decode).runCollect
-              } yield assertTrue(result.mkString("") == "Hello World!")
+              for result <- (Stream(bytes*) >>> Pipeline.utf8Decode).runCollect
+              yield assertTrue(result.mkString("") == "Hello World!")
             } @@ ignore
         }
     }
-}

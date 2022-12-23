@@ -10,9 +10,9 @@
  */
 package foundations.push
 
-import zio._
-import zio.test._
-import zio.test.TestAspect._
+import zio.*
+import zio.test.*
+import zio.test.TestAspect.*
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -26,8 +26,9 @@ import java.util.concurrent.atomic.AtomicReference
  * that uses callbacks for new elements and callbacks for stream
  * termination. Notably, this model does not include backpressure.
  */
-object PushBased extends ZIOSpecDefault {
-  trait Stream[+A] { self =>
+object PushBased extends ZIOSpecDefault:
+  trait Stream[+A]:
+    self =>
     def receive(onElement: A => Unit, onDone: () => Unit): Unit
 
     final def map[B](f: A => B): Stream[B] = ???
@@ -48,7 +49,7 @@ object PushBased extends ZIOSpecDefault {
 
     final def duplicate: (Stream[A], Stream[A]) = ???
 
-    final def runCollect: Chunk[A] = {
+    final def runCollect: Chunk[A] =
       val chunkRef = new AtomicReference[Chunk[A]](Chunk.empty)
 
       val countDownLatch = new java.util.concurrent.CountDownLatch(1)
@@ -58,15 +59,12 @@ object PushBased extends ZIOSpecDefault {
       countDownLatch.await()
 
       chunkRef.get()
-    }
-  }
-  object Stream {
+  object Stream:
     def apply[A](as0: A*): Stream[A] =
-      new Stream[A] {
+      new Stream[A]:
         def receive(onElement: A => Unit, onDone: () => Unit): Unit =
           try as0.foreach(onElement)
           finally onDone()
-      }
 
     def unfold[S, A](initial: S)(f: S => Option[S]): Stream[S] = ???
 
@@ -78,12 +76,10 @@ object PushBased extends ZIOSpecDefault {
     def suspend[A](stream: => Stream[A]): Stream[A] =
       ???
 
-    def fromFile(file: String): Stream[Byte] = {
+    def fromFile(file: String): Stream[Byte] =
       import java.io.FileInputStream
 
       ???
-    }
-  }
 
   def spec =
     suite("PushBasedSpec") {
@@ -98,9 +94,8 @@ object PushBased extends ZIOSpecDefault {
         test("map") {
           val stream = Stream(1, 2, 3, 4)
 
-          for {
-            mapped <- ZIO.succeed(stream.map(_ + 1))
-          } yield assertTrue(mapped.runCollect == Chunk(2, 3, 4, 5))
+          for mapped <- ZIO.succeed(stream.map(_ + 1))
+          yield assertTrue(mapped.runCollect == Chunk(2, 3, 4, 5))
         } @@ ignore +
           /**
            * EXERCISE
@@ -111,9 +106,8 @@ object PushBased extends ZIOSpecDefault {
           test("take") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              taken <- ZIO.succeed(stream.take(2))
-            } yield assertTrue(taken.runCollect == Chunk(1, 2))
+            for taken <- ZIO.succeed(stream.take(2))
+            yield assertTrue(taken.runCollect == Chunk(1, 2))
           } @@ ignore +
           /**
            * EXERCISE
@@ -124,9 +118,8 @@ object PushBased extends ZIOSpecDefault {
           test("drop") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              dropped <- ZIO.succeed(stream.drop(2))
-            } yield assertTrue(dropped.runCollect == Chunk(3, 4))
+            for dropped <- ZIO.succeed(stream.drop(2))
+            yield assertTrue(dropped.runCollect == Chunk(3, 4))
           } @@ ignore +
           /**
            * EXERCISE
@@ -137,9 +130,8 @@ object PushBased extends ZIOSpecDefault {
           test("filter") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              filtered <- ZIO.succeed(stream.filter(_ % 2 == 0))
-            } yield assertTrue(filtered.runCollect == Chunk(2, 4))
+            for filtered <- ZIO.succeed(stream.filter(_ % 2 == 0))
+            yield assertTrue(filtered.runCollect == Chunk(2, 4))
           } @@ ignore +
           /**
            * EXERCISE
@@ -151,9 +143,8 @@ object PushBased extends ZIOSpecDefault {
             val stream1 = Stream(1, 2, 3, 4)
             val stream2 = Stream(5, 6, 7, 8)
 
-            for {
-              appended <- ZIO.succeed(stream1 ++ stream2)
-            } yield assertTrue(appended.runCollect == Chunk(1, 2, 3, 4, 5, 6, 7, 8))
+            for appended <- ZIO.succeed(stream1 ++ stream2)
+            yield assertTrue(appended.runCollect == Chunk(1, 2, 3, 4, 5, 6, 7, 8))
           } @@ ignore +
           /**
            * EXERCISE
@@ -164,9 +155,8 @@ object PushBased extends ZIOSpecDefault {
           test("flatMap") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              flatMapped <- ZIO.succeed(stream.flatMap(a => Stream(a, a)))
-            } yield assertTrue(flatMapped.runCollect == Chunk(1, 1, 2, 2, 3, 3, 4, 4))
+            for flatMapped <- ZIO.succeed(stream.flatMap(a => Stream(a, a)))
+            yield assertTrue(flatMapped.runCollect == Chunk(1, 1, 2, 2, 3, 3, 4, 4))
           } @@ ignore +
           /**
            * EXERCISE
@@ -177,9 +167,8 @@ object PushBased extends ZIOSpecDefault {
           test("mapAccum") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              mapped <- ZIO.succeed(stream.mapAccum(0)((s, a) => (s + a, s + a)))
-            } yield assertTrue(mapped.runCollect == Chunk(1, 3, 6, 10))
+            for mapped <- ZIO.succeed(stream.mapAccum(0)((s, a) => (s + a, s + a)))
+            yield assertTrue(mapped.runCollect == Chunk(1, 3, 6, 10))
           } @@ ignore +
           /**
            * EXERCISE
@@ -190,9 +179,8 @@ object PushBased extends ZIOSpecDefault {
           test("foldLeft") {
             val stream = Stream(1, 2, 3, 4)
 
-            for {
-              folded <- ZIO.succeed(stream.foldLeft(0)(_ + _))
-            } yield assertTrue(folded == 10)
+            for folded <- ZIO.succeed(stream.foldLeft(0)(_ + _))
+            yield assertTrue(folded == 10)
           } @@ ignore
       } +
         suite("advanced constructors") {
@@ -272,13 +260,12 @@ object PushBased extends ZIOSpecDefault {
 
             val (left, right) = stream.duplicate
 
-            for {
+            for
               fiber1 <- ZIO.succeed(left.runCollect).fork
               fiber2 <- ZIO.succeed(right.runCollect).fork
-              left   <- fiber1.join
-              right  <- fiber2.join
-            } yield assertTrue(left == right)
+              left <- fiber1.join
+              right <- fiber2.join
+            yield assertTrue(left == right)
           } @@ ignore
         }
     }
-}

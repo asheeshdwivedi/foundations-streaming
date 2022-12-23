@@ -7,9 +7,9 @@
  */
 package foundations.apps
 
-import zio._
+import zio.*
 
-import zio.stream._
+import zio.stream.*
 
 /**
  * Build a command-line application that accepts a number of files.
@@ -17,6 +17,5 @@ import zio.stream._
  * files in parallel, and then aggregate the word count information.
  * Finally, display the aggregated word count.
  */
-object StreamApp extends ZIOAppDefault {
+object StreamApp extends ZIOAppDefault:
   def run = Console.printLine("Hello World!")
-}

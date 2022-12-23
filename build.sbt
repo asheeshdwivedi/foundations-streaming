@@ -5,7 +5,7 @@ lazy val root = project
   .settings(
     name := "foundations-streaming",
     organization := "net.degoes",
-    scalaVersion := "2.13.10"
+    scalaVersion := "3.2.1"
   )
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
@@ -16,10 +16,10 @@ addCommandAlias(
 
 libraryDependencies ++= Seq(
   // ZIO
-  "dev.zio" %% "zio"          % ZIOVersion,
-  "dev.zio" %% "zio-streams"  % ZIOVersion,
-  "dev.zio" %% "zio-test"     % ZIOVersion,
-  "dev.zio" %% "zio-test"     % ZIOVersion % "test",
+  "dev.zio" %% "zio" % ZIOVersion,
+  "dev.zio" %% "zio-streams" % ZIOVersion,
+  "dev.zio" %% "zio-test" % ZIOVersion,
+  "dev.zio" %% "zio-test" % ZIOVersion % "test",
   "dev.zio" %% "zio-test-sbt" % ZIOVersion % "test"
 )
 
